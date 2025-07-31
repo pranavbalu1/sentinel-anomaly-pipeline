@@ -31,6 +31,5 @@ def upload_parquet_directory_to_s3(date, local_base_dir, transformed_file, bucke
         upload_to_s3(part_file, bucket_name, object_key)
 
     #Cleanup local file after upload
-    os.remove(part_file)
     shutil.rmtree(parquet_dir)
     print(f"✅ Cleaned up local files")

@@ -3,6 +3,7 @@ import numpy as np
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, FloatType
 from pyspark.sql.functions import col
+import os
 
 # Initialize Spark
 spark = SparkSession.builder.appName("SatellitePreprocessing").getOrCreate()
@@ -67,3 +68,6 @@ def transform_red_edge_image(tiff_path, output_path):
     # Save filtered data as Parquet for downstream use
     df_filtered.write.mode("overwrite").parquet(output_path)
     print(f"✅ Processed data saved to {output_path}")
+
+    #Cleanup
+    os.remove(tiff_path)
