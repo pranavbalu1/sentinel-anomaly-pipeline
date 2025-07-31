@@ -1,5 +1,6 @@
 import os
 import datetime
+import shutil
 from sentinel_download import download_sentinel_image
 from process_data import transform_red_edge_image
 from s3_uploader import upload_parquet_directory_to_s3
@@ -27,8 +28,13 @@ def main():
     local_base_dir = os.path.dirname(__file__)  # points to /scripts
     upload_parquet_directory_to_s3(date, local_base_dir, transformed_file, bucket_name)
 
-    #cleanup, leave it be for now since 7/30 data isn't empty
-    #os.remove(raw_file)
+    #Cleanup
+    os.remove(raw_file)
+    shutil.rmtree(transformed_file)
+    print(f"✅ Process completed for {date}!")
+
+
+
 
 if __name__ == "__main__":
     main()
