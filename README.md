@@ -94,7 +94,7 @@ The **Sentinel-5P (Precursor)** satellite, part of the Copernicus Earth observat
   * Filters based on red-edge thresholds
   * Saves to Parquet
 
-### `utils/s3_uploader.py`
+### `s3_uploader.py`
 
 * **Role:** S3 client wrapper
 * **Function:** Uploads local files to AWS S3 with Boto3
