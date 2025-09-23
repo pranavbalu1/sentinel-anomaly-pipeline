@@ -29,8 +29,9 @@ def extract_geospatial_data(tiff_path):
             (
                 float(coords[i][0]),  # latitude
                 float(coords[i][1]),  # longitude
-                float(pixels[i][0]),  # band1 (B11)
-                float(pixels[i][1])   # band2 (B12)
+                float(pixels[i][0]),  # red_edge1
+                float(pixels[i][1]),  # red_edge2
+                float(pixels[i][2])   # red_edge3
             )
             for i in range(len(pixels))
         ]
@@ -41,8 +42,9 @@ def create_spark_df(data):
     schema = StructType([
         StructField("latitude", FloatType(), True),
         StructField("longitude", FloatType(), True),
-        StructField("B11", FloatType(), True),  # B11
-        StructField("B12", FloatType(), True)   # B12
+        StructField("red_edge1", FloatType(), True),
+        StructField("red_edge2", FloatType(), True),
+        StructField("red_edge3", FloatType(), True)
     ])
     df = spark.createDataFrame(data, schema=schema)
     print("✅ Spark DataFrame created with coordinates.")
@@ -56,8 +58,9 @@ def transform_red_edge_image(tiff_path, output_path):
 
     # Filter low-value pixels to reduce noise
     df_filtered = df.filter(
-        (col("B11") > 0.01) &
-        (col("B12") > 0.01)
+        (col("red_edge1") > 0.01) &
+        (col("red_edge2") > 0.01) &
+        (col("red_edge3") > 0.01)
     )
     print("📉 Filtered DataFrame:")
     df_filtered.show(5)
@@ -66,5 +69,5 @@ def transform_red_edge_image(tiff_path, output_path):
     df_filtered.write.mode("overwrite").parquet(output_path)
     print(f"✅ Processed data saved to {output_path}")
 
-    # Cleanup
+    #Cleanup
     os.remove(tiff_path)

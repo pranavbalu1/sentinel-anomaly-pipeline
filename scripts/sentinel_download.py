@@ -11,20 +11,25 @@ def download_sentinel_image(date_str: str, output_file: str):
         "Content-Type": "application/json"
     }
     #B05, B06, B07 are the Red Edge bands for Sentinel-2
+    #and are sensitive to vegetation health
+
+    #B11 and B12 are SWIR bands, central wavelengths 1610 nm and 2190 nm respectively
+    #and are sensitive to methane absorption features
+
     #sample type is set to FLOAT32 for better precision
     evalscript = """
         //VERSION=3
         function setup() {
         return {
-            input: ["B05", "B06", "B07"],
+            input: ["B11", "B12"],
             output: {
-            bands: 3,
+            bands: 2,
             sampleType: "FLOAT32"
             }
         };
         }
         function evaluatePixel(sample) {
-        return [sample.B05, sample.B06, sample.B07];
+        return [sample.B11, sample.B12];
         }
 
     """
@@ -62,5 +67,6 @@ def download_sentinel_image(date_str: str, output_file: str):
         with open(output_file, "wb") as f:
             f.write(response.content)
         print(f"✅ Download complete: {output_file}")
+        print(f"📅 Data Date: {date_str}")
     else:
         print(f"❌ Failed: {response.status_code}\n{response.text}")
