@@ -2,18 +2,27 @@ import pyarrow.dataset as ds
 import pyarrow.fs as fs
 import pandas as pd
 import numpy as np
+import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 from config import PREFIX, BATCH_SIZE, CONTAMINATION, RANDOM_STATE, EPS, MIN_SAMPLES
+from dotenv import load_dotenv
+from datetime import datetime
 
+load_dotenv()
 
 def read_parquet_in_batches(bucket_name, prefix, batch_size=BATCH_SIZE):
     s3_path = f"{bucket_name}/{prefix}"
     print(f"Reading dataset from: {s3_path}")
 
-    s3 = fs.S3FileSystem()
+    s3 = fs.S3FileSystem(
+        access_key=os.getenv("AWS_ACCESS_KEY_ID"),
+        secret_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region=os.getenv("AWS_DEFAULT_REGION") or "us-east-2"
+    )
+
     dataset = ds.dataset(s3_path, format="parquet", filesystem=s3)
 
     for batch in dataset.to_batches(batch_size=batch_size):
@@ -24,7 +33,6 @@ def read_parquet_in_batches(bucket_name, prefix, batch_size=BATCH_SIZE):
 
 def preprocess(df):
     df = df.copy()
-
     df['date'] = pd.to_datetime(df['date'], errors='coerce')
     df = df.dropna(subset=['date'])
     if df.empty:
@@ -54,12 +62,10 @@ def cluster_anomalies(anomalies):
     if anomalies.empty:
         return anomalies
 
-    # Cluster based on latitude, longitude, and date
     X = anomalies[['latitude', 'longitude', 'date_ordinal']].to_numpy()
     db = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES).fit(X)
     anomalies['plume_cluster'] = db.labels_
 
-    # Summarize anomalies by cluster
     summary = anomalies.groupby('plume_cluster').agg(
         count=('latitude', 'size'),
         min_latitude=('latitude', 'min'),
@@ -80,26 +86,52 @@ def cluster_anomalies(anomalies):
     return anomalies
 
 
+def plot_anomalies(all_data_df, anomalies):
+    timestamp = datetime.now().strftime("%m-%d-%H%M")  # MM-DD-HHMM
+    print(f"Total data points: {len(all_data_df)}")
+    print(f"Total anomalies: {len(anomalies)}")
+    print(f"Generating plots with timestamp: {timestamp}")
 
-def plot_anomalies(df, anomalies):
+    # ---------------------------
+    # 1️⃣ Plot anomalies only (with plume clusters)
+    # ---------------------------
     plt.figure(figsize=(10,6))
-    plt.scatter(df['longitude'], df['latitude'], s=1, alpha=0.3, label='Normal')
     
     clusters = anomalies['plume_cluster'].unique()
-    colors = plt.cm.get_cmap('tab10', len(clusters))
+    cmap = plt.colormaps['tab10']
+    colors = [cmap(i % 10) for i in range(len(clusters))]
     
     for i, cluster in enumerate(clusters):
         cluster_points = anomalies[anomalies['plume_cluster'] == cluster]
         if cluster == -1:
             plt.scatter(cluster_points['longitude'], cluster_points['latitude'], s=5, color='grey', label='Noise')
         else:
-            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], s=5, color=colors(i), label=f'Plume {cluster}')
+            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], s=5, color=colors[i], label=f'Plume {cluster}')
     
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
-    plt.title('Methane Plume Anomalies')
+    plt.title(f'Methane Plume Anomalies ({timestamp})')
     plt.legend()
-    plt.show()
+    plt.tight_layout()
+    anomalies_file = f"anomalies_only_{timestamp}.png"
+    plt.savefig(anomalies_file, dpi=300)
+    plt.close()
+    print(f"Saved anomalies-only plot as {anomalies_file}")
+
+    # ---------------------------
+    # 2️⃣ Plot all datapoints (normal + anomalies)
+    # ---------------------------
+    plt.figure(figsize=(10,6))
+    plt.scatter(all_data_df['longitude'], all_data_df['latitude'], s=1, alpha=0.3, label='All points', color='lightblue')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    plt.title(f'All Data Points ({timestamp})')
+    plt.legend()
+    plt.tight_layout()
+    all_data_file = f"all_data_points_{timestamp}.png"
+    plt.savefig(all_data_file, dpi=300)
+    plt.close()
+    print(f"Saved all-data plot as {all_data_file}")
 
 
 if __name__ == "__main__":
@@ -107,21 +139,22 @@ if __name__ == "__main__":
     prefix = PREFIX
     
     all_anomalies = []
+    df_batches = []
 
     # Process S3 in batches
     for df_batch in read_parquet_in_batches(bucket, prefix, batch_size=BATCH_SIZE):
-        # Skip empty batches
         if df_batch.empty:
             continue
 
         df_batch = preprocess(df_batch)
+        df_batches.append(df_batch)
         anomalies_batch = detect_anomalies(df_batch)
         anomalies_batch = cluster_anomalies(anomalies_batch)
         all_anomalies.append(anomalies_batch)
 
-    # Combine anomalies across all batches
     if all_anomalies:
         all_anomalies_df = pd.concat(all_anomalies, ignore_index=True)
-        plot_anomalies(all_anomalies_df, all_anomalies_df)
+        all_data_df = pd.concat(df_batches, ignore_index=True)
+        plot_anomalies(all_data_df, all_anomalies_df)
     else:
         print("No anomalies detected.")
