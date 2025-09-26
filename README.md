@@ -1,182 +1,171 @@
-# 🌍 Sentinel-5P Satellite Data Pipeline
+Perfect! I can create a `README.md` and a `requirements.txt` for your project based on your code and structure. I’ll organize the README to be clear, professional, and user-friendly.
 
-This project ingests, processes, and uploads Earth observation data from the **Sentinel-5P** satellite with a focus on **red-edge bands** used in vegetation analysis. It is designed as a reproducible, daily pipeline that automates downloading, transforming, and uploading satellite imagery for scalable environmental monitoring and analysis.
-
----
-
-## 🛰 About Sentinel-5P
-
-The **Sentinel-5P (Precursor)** satellite, part of the Copernicus Earth observation program run by the European Space Agency (ESA), is equipped with the **TROPOMI** instrument to monitor atmospheric trace gases and aerosols. It captures high-resolution data critical for environmental studies, especially:
-
-* **Air quality monitoring**
-* **Greenhouse gas emissions**
-* **Vegetation health via spectral bands (e.g., red-edge)**
+Here’s a draft:
 
 ---
 
-## 🚀 What This Pipeline Does
+### `README.md`
 
-1. **Download** raw Sentinel-5P imagery for the current day
-2. **Process** the imagery to extract relevant red-edge spectral bands
-3. **Transform** the image data into tabular format for analytical use
-4. **Filter** out invalid/irrelevant pixels based on a red-edge threshold
-5. **Save** the transformed dataset as a `.parquet` file
-6. **Upload** the transformed data to an **Amazon S3** bucket in a date-partitioned format
+```markdown
+# Sentinel Methane Detection Pipeline
 
----
+## Overview
 
-## 📊 Data Lifecycle
+This project implements a daily pipeline for downloading, processing, and analyzing Sentinel-2 satellite imagery to detect methane plumes. The pipeline is built using **Python**, **Prefect**, **PySpark**, **PyArrow**, and **AWS S3** for data storage.
 
-### 🔹 Step 1: Raw Data (TIFF)
+The main functionality includes:
 
-* **Format:** GeoTIFF (`.tiff`)
-* **Source:** Sentinel-5P via Copernicus Open Access Hub or Sentinel Hub API
-* **Structure:** Multiband image array (3 bands: `red_edge1`, `red_edge2`, `red_edge3`)
-* **Example shape:** `(3, 512, 512)`
-
-### 🔹 Step 2: Intermediate Data (NumPy array ➝ Spark DataFrame)
-
-* **Parsed into rows:** Each row = one pixel with 3 red-edge values
-* **Initial filtering:** Drop any pixel where any red-edge value < 0.01
-
-### 🔹 Step 3: Transformed Data (Parquet)
-
-* **Output:** Cleaned Spark DataFrame serialized to `.parquet`
-* **Columns:** `red_edge1`, `red_edge2`, `red_edge3`
-* **Sample Output:**
-
-  ```text
-  +----------+----------+----------+
-  |red_edge1 |red_edge2 |red_edge3 |
-  +----------+----------+----------+
-  | 0.5343   | 0.5538   | 0.5650   |
-  | 0.5845   | 0.6057   | 0.6173   |
-  | 0.2983   | 0.3377   | 0.3530   |
-  ```
-
-### 🔹 Step 4: Storage (Amazon S3)
-
-* **Path Format:**
-
-  ```
-  s3://ndvi-daily-data/sentinel-data/date=YYYY-MM-DD/
-  ```
-* **Partitioned by:** Date (for time-series querying)
+1. **Download Sentinel-2 imagery** (bands B11 and B12 sensitive to methane absorption).
+2. **Process and transform the imagery** into Parquet format with geospatial coordinates.
+3. **Upload processed data to AWS S3** for storage.
+4. **Detect anomalies** using machine learning models (**Isolation Forest** and **DBSCAN**) to identify potential methane plumes.
+5. **Visualize anomalies** on a scatter plot with clusters representing detected plumes.
 
 ---
 
-## 📂 File-by-File Explanation
+## Project Structure
 
-### `main.py`
-
-* **Role:** Entry point of the pipeline
-* **Function:** Coordinates downloading, processing, and uploading
-* **Key Actions:**
-
-  * Gets today’s date
-  * Calls download and processing modules
-  * Uploads `.parquet` to S3
-
-### `sentinel_download.py`
-
-* **Role:** Download helper
-* **Function:** Authenticates with Sentinel API and downloads a `.tiff` image file
-* **Details:** Uses an access token to make a GET request for today’s image
-
-### `process_data.py`
-
-* **Role:** Transformation logic
-* **Function:** Converts `.tiff` to Spark DataFrame
-* **Steps:**
-
-  * Opens the TIFF file
-  * Reshapes bands to tabular form
-  * Filters based on red-edge thresholds
-  * Saves to Parquet
-
-### `s3_uploader.py`
-
-* **Role:** S3 client wrapper
-* **Function:** Uploads local files to AWS S3 with Boto3
-* **Smart features:**
-
-  * Verifies destination path
-  * Logs success/failure
-
----
-
-## ✅ Expected Output (When Pipeline Runs Smoothly)
-
-When everything works properly, the script outputs the following:
-
-```bash
-📥 Downloading Sentinel image for 2025-07-30...
-✅ Access Token retrieved.
-Access Token: eyJhbGciOi...
-✅ Download complete: raw_sentinel_2025-07-30.tiff
-
-⚙️  Processing image and saving to transformed_data_2025-07-30.parquet...
-🛠️  Transforming image: raw_sentinel_2025-07-30.tiff
-📂 Opening TIFF file: raw_sentinel_2025-07-30.tiff
-ℹ️ Image shape (bands, height, width): (3, 512, 512)
-🔍 Sample raw pixels (first 5):
-[[0.5343 0.5538 0.565 ]
- [0.5845 0.6057 0.6173]
- ...
-✅ Spark DataFrame created.
-📊 Sample DataFrame rows (first 5):
-+---------+---------+---------+
-|red_edge1|red_edge2|red_edge3|
-+---------+---------+---------+
-|   0.5343|   0.5538|    0.565|
-|   0.5845|   0.6057|   0.6173|
-...
-
-📉 Filtered DataFrame (red_edge1 > 0.01, red_edge2 > 0.01, red_edge3 > 0.01):
-+---------+---------+---------+
-...
-
-✅ Transformed data with vegetation indices written to transformed_data_2025-07-30.parquet
-
-☁️ Uploading to S3...
-✅ Uploaded to s3://ndvi-daily-data/sentinel-data/date=2025-07-30/...
 ```
 
+project-root/
+│
+├─ sentinel_pipeline.py       # Prefect pipeline for daily processing
+├─ monthly_pipeline.py        # Script to process all dates from the previous month
+├─ model.py                   # Anomaly detection and clustering script
+├─ process_data.py            # Image transformation & Spark DataFrame creation
+├─ s3_uploader.py             # Upload transformed Parquet files to S3
+├─ sentinel_download.py       # Download Sentinel-2 images via Sentinel Hub API
+├─ sentinel_auth.py           # Sentinel Hub OAuth token management
+├─ config.py                  # Configuration constants (BBOX, S3 prefix, etc.)
+├─ requirements.txt           # Python dependencies
+└─ README.md
+
+````
+
 ---
 
-## 💡 Use Cases for Transformed Data
+## Installation
 
-The final `.parquet` dataset enables:
+1. **Clone the repository:**
 
-* 🌱 **Vegetation Health Monitoring** (NDVI, Red Edge Position Index)
-* 🛰 **Time-Series Analysis** of Earth surface changes
-* 🌾 **Agriculture Monitoring** (crop stress, soil condition)
-* 🌳 **Deforestation and Land Use Tracking**
-* 🧠 **Machine Learning Input** for anomaly detection or classification
-* 📈 **Visualization Dashboards** with tools like Apache Superset or Grafana
+```bash
+git clone <your-repo-url>
+cd project-root
+````
 
----
+2. **Create a virtual environment and activate it:**
 
-## 🛠 Requirements
+```bash
+python3 -m venv venv
+source venv/bin/activate   # Linux/macOS
+venv\Scripts\activate      # Windows
+```
+
+3. **Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Includes:
+4. **Set environment variables** (in `.env` file in the root directory):
 
-* `boto3`
-* `pyspark`
-* `rasterio`
-* `numpy`
-* `requests`
+```env
+SENTINEL_CLIENT_ID=<your-client-id>
+SENTINEL_CLIENT_SECRET=<your-client-secret>
+S3_BUCKET=<your-s3-bucket>
+```
+
+---
+
+## Configuration
+
+Edit `config.py` to adjust:
+
+* `BBOX` – bounding box for your region of interest.
+* `WIDTH` and `HEIGHT` – resolution of the downloaded image.
+* `PREFIX` – S3 prefix for storing data.
+* Batch size and ML model parameters for anomaly detection (`BATCH_SIZE`, `CONTAMINATION`, `EPS`, `MIN_SAMPLES`).
 
 ---
 
-## 📌 Notes
+## Running the Pipeline
 
-* Ensure you have AWS credentials configured to use `boto3`.
-* The TIFF files should contain red-edge bands; other bands are currently ignored.
-* This system can be extended to compute vegetation indices (NDVI, RECI, etc.).
+### 1. Daily Pipeline
+
+```bash
+python sentinel_pipeline.py --date 2025-09-25
+```
+
+* `--date` : single date in `YYYY-MM-DD` format.
+* If no date is provided, defaults to today.
+* Can also process a date range with `--start-date` and `--end-date`.
+
+### 2. Monthly Pipeline
+
+```bash
+python monthly_pipeline.py
+```
+
+* Automatically processes all dates from the previous month.
 
 ---
+
+## Anomaly Detection
+
+1. Reads processed Parquet files from S3 in batches.
+2. Preprocesses features (`B11`, `B12`, `B_diff`, latitude, longitude, date).
+3. Uses **Isolation Forest** to detect anomalous pixels.
+4. Clusters anomalies with **DBSCAN** to identify plumes.
+5. Visualizes results using matplotlib.
+
+---
+
+## Notes
+
+* Requires **AWS credentials** configured via environment variables or AWS CLI.
+* Spark is used to efficiently process large satellite images.
+* TIFF images are deleted locally after transformation to save space.
+* Ensure Sentinel Hub credentials are valid.
+
+---
+
+## Example Output
+
+* Parquet files stored in S3:
+
+```
+s3://<bucket>/<prefix>/part-*.parquet
+```
+
+* Plume anomaly visualization:
+
+  * Grey points: noise
+  * Colored points: clustered methane plumes
+  * Interactive scatter plot showing latitude/longitude of anomalies
+
+````
+
+---
+
+### `requirements.txt`
+
+```text
+prefect==2.12.2
+pandas==2.1.0
+numpy==1.27.0
+pyarrow==12.0.1
+boto3==2.13.0
+botocore==2.13.0
+scikit-learn==1.3.0
+matplotlib==3.8.0
+rasterio==1.3.9
+pyspark==3.5.0
+requests==2.32.0
+python-dotenv==1.0.1
+````
+
+---
+
+I can also draft a **diagram of the pipeline workflow** for your README to make it very clear how data flows from Sentinel Hub → processing → S3 → anomaly detection.
+
+Do you want me to include that diagram?
