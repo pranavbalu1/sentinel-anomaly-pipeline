@@ -62,7 +62,7 @@ def cluster_anomalies(anomalies):
     if anomalies.empty:
         return anomalies
 
-    X = anomalies[['latitude', 'longitude', 'date_ordinal']].to_numpy()
+    X = anomalies[['latitude', 'longitude', 'date_ordinal']].to_numpy() #Should I use scaled values here?
     db = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES).fit(X)
     anomalies['plume_cluster'] = db.labels_
 
@@ -85,53 +85,61 @@ def cluster_anomalies(anomalies):
 
     return anomalies
 
-
 def plot_anomalies(all_data_df, anomalies):
     timestamp = datetime.now().strftime("%m-%d-%H%M")  # MM-DD-HHMM
+    param_text = (f"BATCH_SIZE={BATCH_SIZE}, CONTAMINATION={CONTAMINATION}, "
+                  f"RANDOM_STATE={RANDOM_STATE}, EPS={EPS}, MIN_SAMPLES={MIN_SAMPLES}")
+
     print(f"Total data points: {len(all_data_df)}")
     print(f"Total anomalies: {len(anomalies)}")
     print(f"Generating plots with timestamp: {timestamp}")
 
     # ---------------------------
-    # 1️⃣ Plot anomalies only (with plume clusters)
+    # 1️⃣ Plot anomalies only
     # ---------------------------
     plt.figure(figsize=(10,6))
-    
     clusters = anomalies['plume_cluster'].unique()
     cmap = plt.colormaps['tab10']
     colors = [cmap(i % 10) for i in range(len(clusters))]
-    
+
     for i, cluster in enumerate(clusters):
         cluster_points = anomalies[anomalies['plume_cluster'] == cluster]
         if cluster == -1:
-            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], s=5, color='grey', label='Noise')
+            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], 
+                        s=5, color='grey', label='Noise')
         else:
-            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], s=5, color=colors[i], label=f'Plume {cluster}')
-    
+            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], 
+                        s=5, color=colors[i], label=f'Plume {cluster}')
+
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
     plt.title(f'Methane Plume Anomalies ({timestamp})')
-    plt.legend()
-    plt.tight_layout()
+    #plt.legend()
+    plt.figtext(0.5, 0.01, param_text, ha="center", fontsize=8, wrap=True)  # ⬅️ Added here
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     anomalies_file = f"anomalies_only_{timestamp}.png"
     plt.savefig(anomalies_file, dpi=300)
     plt.close()
     print(f"Saved anomalies-only plot as {anomalies_file}")
 
     # ---------------------------
-    # 2️⃣ Plot all datapoints (normal + anomalies)
+    # 2️⃣ Plot all datapoints
     # ---------------------------
+    '''
     plt.figure(figsize=(10,6))
-    plt.scatter(all_data_df['longitude'], all_data_df['latitude'], s=1, alpha=0.3, label='All points', color='lightblue')
+    plt.scatter(all_data_df['longitude'], all_data_df['latitude'], 
+                s=1, alpha=0.3, label='All points', color='lightblue')
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
     plt.title(f'All Data Points ({timestamp})')
     plt.legend()
-    plt.tight_layout()
+    plt.figtext(0.5, 0.01, param_text, ha="center", fontsize=8, wrap=True)  # ⬅️ Added here too
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     all_data_file = f"all_data_points_{timestamp}.png"
     plt.savefig(all_data_file, dpi=300)
     plt.close()
     print(f"Saved all-data plot as {all_data_file}")
+    '''
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ PREFIX = "known_sources" # Known methane sources
 #Model parameters
 BATCH_SIZE = 100000
 
-CONTAMINATION = 0.005
+CONTAMINATION = 0.01 # Proportion of outliers in the data
 RANDOM_STATE = 42
-EPS = 0.01  # DBSCAN eps parameter
+EPS = 0.01  
 MIN_SAMPLES = 5  # DBSCAN min_samples parameter
