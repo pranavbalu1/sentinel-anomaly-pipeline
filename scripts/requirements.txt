@@ -9,4 +9,7 @@ matplotlib
 rasterio
 pyspark
 requests
+
 python-dotenv
+
+hdbscan

@@ -17,5 +17,11 @@ BATCH_SIZE = 100000
 
 CONTAMINATION = 0.01 # Proportion of outliers in the data
 RANDOM_STATE = 42
-EPS = 0.01  
+EPS = 0.5  
 MIN_SAMPLES = 5  # DBSCAN min_samples parameter
+
+XI = 0.01  # OPTICS xi parameter
+MIN_CLUSTER_SIZE = 5  # OPTICS min_cluster_size parameter
+
+N_COMPONENTS = 5  # GMM number of components
+
