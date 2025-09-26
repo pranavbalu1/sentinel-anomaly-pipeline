@@ -1,7 +1,6 @@
 import requests
 from sentinel_auth import get_access_token  # <- Make sure this is here
-from config import BBOX
-
+from config import BBOX, WIDTH, HEIGHT
 def download_sentinel_image(date_str: str, output_file: str):
     token = get_access_token()
 
@@ -51,8 +50,8 @@ def download_sentinel_image(date_str: str, output_file: str):
         },
         "evalscript": evalscript,
         "output": {
-            "width": 512,
-            "height": 512,
+            "width": WIDTH,
+            "height": HEIGHT,
             "responses": [{
                 "identifier": "default",
                 "format": {

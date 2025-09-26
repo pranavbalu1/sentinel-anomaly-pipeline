@@ -3,6 +3,7 @@ import glob
 import boto3
 from botocore.exceptions import NoCredentialsError
 import shutil
+from config import PREFIX
 
 
 def upload_to_s3(file_path, bucket_name, object_key):
@@ -23,13 +24,13 @@ def upload_parquet_directory_to_s3(date, local_base_dir, transformed_file, bucke
     if not part_files:
         raise FileNotFoundError(f"No part-*.parquet files found in {parquet_dir}")
 
-    s3_prefix = f"sentinel-data/date={date}"
+
 
     for part_file in part_files:
-        object_key = f"{s3_prefix}/{os.path.basename(part_file)}"
+        object_key = f"{PREFIX}/{os.path.basename(part_file)}"
         print(f"Uploading {part_file} to s3://{bucket_name}/{object_key}...")
         upload_to_s3(part_file, bucket_name, object_key)
 
-    #Cleanup local file after upload
+    # Cleanup local file after upload
     shutil.rmtree(parquet_dir)
     print(f"✅ Cleaned up local files")

@@ -1,9 +1,10 @@
 import rasterio
 import numpy as np
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, FloatType
-from pyspark.sql.functions import col
+from pyspark.sql.types import StructType, StructField, FloatType, StringType
+from pyspark.sql.functions import col, lit
 import os
+import re
 
 # Initialize Spark
 spark = SparkSession.builder.appName("SatellitePreprocessing").getOrCreate()
@@ -20,7 +21,7 @@ def extract_geospatial_data(tiff_path):
         rows, cols = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')
         xs, ys = rasterio.transform.xy(src.transform, rows, cols)
 
-        # Flatten the arrays for Spark dataframe creation
+        # Flatten arrays for Spark dataframe creation
         coords = list(zip(np.array(xs).flatten(), np.array(ys).flatten()))
         pixels = bands.reshape(-1, bands.shape[2])
 
@@ -37,22 +38,33 @@ def extract_geospatial_data(tiff_path):
 
         return data
 
-def create_spark_df(data):
+def create_spark_df(data, date_str):
     schema = StructType([
         StructField("latitude", FloatType(), True),
         StructField("longitude", FloatType(), True),
-        StructField("B11", FloatType(), True),  # B11
-        StructField("B12", FloatType(), True)   # B12
+        StructField("B11", FloatType(), True),
+        StructField("B12", FloatType(), True),
     ])
     df = spark.createDataFrame(data, schema=schema)
-    print("✅ Spark DataFrame created with coordinates.")
+    # Add date column
+    df = df.withColumn("date", lit(date_str).cast(StringType()))
+    print("✅ Spark DataFrame created with coordinates + date.")
     df.show(5)
     return df
 
 def transform_red_edge_image(tiff_path, output_path):
     print(f"🛠️ Transforming image: {tiff_path}")
+
+    # Extract date from filename using regex
+    match = re.search(r"(\d{4}-\d{2}-\d{2})", tiff_path)
+    date_str = match.group(1) if match else "unknown"
+    print(f"📅 Data Date: {date_str}")
+
+    # Extract pixel data
     data = extract_geospatial_data(tiff_path)
-    df = create_spark_df(data)
+
+    # Create Spark DataFrame with date
+    df = create_spark_df(data, date_str)
 
     # Filter low-value pixels to reduce noise
     df_filtered = df.filter(
