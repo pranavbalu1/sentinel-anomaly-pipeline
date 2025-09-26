@@ -1,0 +1,12 @@
+prefect
+pandas
+numpy
+pyarrow
+boto3
+botocore
+scikit-learn
+matplotlib
+rasterio
+pyspark
+requests
+python-dotenv
