@@ -1,11 +1,3 @@
-Perfect! I can create a `README.md` and a `requirements.txt` for your project based on your code and structure. I’ll organize the README to be clear, professional, and user-friendly.
-
-Here’s a draft:
-
----
-
-### `README.md`
-
 ```markdown
 # Sentinel Methane Detection Pipeline
 
