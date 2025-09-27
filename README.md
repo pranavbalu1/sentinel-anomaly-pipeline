@@ -1,4 +1,4 @@
-```markdown
+
 # Sentinel Methane Detection Pipeline
 
 ## Overview
@@ -13,39 +13,11 @@ The main functionality includes:
 4. **Detect anomalies** using machine learning models (**Isolation Forest** and **DBSCAN**) to identify potential methane plumes.
 5. **Visualize anomalies** on a scatter plot with clusters representing detected plumes.
 
----
 
-## Project Structure
-
-```
-
-project-root/
-│
-├─ sentinel_pipeline.py       # Prefect pipeline for daily processing
-├─ monthly_pipeline.py        # Script to process all dates from the previous month
-├─ model.py                   # Anomaly detection and clustering script
-├─ process_data.py            # Image transformation & Spark DataFrame creation
-├─ s3_uploader.py             # Upload transformed Parquet files to S3
-├─ sentinel_download.py       # Download Sentinel-2 images via Sentinel Hub API
-├─ sentinel_auth.py           # Sentinel Hub OAuth token management
-├─ config.py                  # Configuration constants (BBOX, S3 prefix, etc.)
-├─ requirements.txt           # Python dependencies
-└─ README.md
-
-````
-
----
 
 ## Installation
 
-1. **Clone the repository:**
-
-```bash
-git clone <your-repo-url>
-cd project-root
-````
-
-2. **Create a virtual environment and activate it:**
+1. **Create a virtual environment and activate it:**
 
 ```bash
 python3 -m venv venv
@@ -53,18 +25,20 @@ source venv/bin/activate   # Linux/macOS
 venv\Scripts\activate      # Windows
 ```
 
-3. **Install dependencies:**
+2. **Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Set environment variables** (in `.env` file in the root directory):
+3. **Set environment variables** (in `.env` file in the root directory):
 
 ```env
 SENTINEL_CLIENT_ID=<your-client-id>
 SENTINEL_CLIENT_SECRET=<your-client-secret>
-S3_BUCKET=<your-s3-bucket>
+AWS_ACCESS_KEY_ID=<your-access-key>
+AWS_SECRET_ACCESS_KEY=<your-secret-key>
+AWS_DEFAULT_REGION=us-east-2
 ```
 
 ---
@@ -80,27 +54,56 @@ Edit `config.py` to adjust:
 
 ---
 
-## Running the Pipeline
+## Running the Data Pipeline
 
-### 1. Daily Pipeline
+* **Download** Sentinel images for a specific date.
+* **Process** the raw image into a Parquet file (red edge transformation).
+* **Upload** the transformed data to an S3 bucket.
+* Supports **single-date** or **date-range** batch processing.
+
+
+
+## File Overview
+
+* `flow.py`: Main Prefect flow that orchestrates download, process, and upload tasks.
+* `sentinel_download.py`: Module for downloading Sentinel images.
+* `process_data.py`: Module for transforming raw Sentinel images into Parquet format.
+* `s3_uploader.py`: Module to upload Parquet data to S3.
+* `config.py`: Contains configuration variables like `S3_BUCKET`.
+
+## Usage
+
+Run the pipeline via command line:
+
+### 1. Process **today’s data** (default):
 
 ```bash
-python sentinel_pipeline.py --date 2025-09-25
+python flow.py
 ```
 
-* `--date` : single date in `YYYY-MM-DD` format.
-* If no date is provided, defaults to today.
-* Can also process a date range with `--start-date` and `--end-date`.
-
-### 2. Monthly Pipeline
+### 2. Process a **single date**:
 
 ```bash
-python monthly_pipeline.py
+python flow.py --date YYYY-MM-DD
 ```
 
-* Automatically processes all dates from the previous month.
+**Example:**
 
----
+```bash
+python flow.py --date 2025-09-26
+```
+
+### 3. Process a **range of dates**:
+
+```bash
+python flow.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD
+```
+
+**Example:**
+
+```bash
+python flow.py --start-date 2025-09-20 --end-date 2025-09-26
+```
 
 ## Anomaly Detection
 
@@ -121,14 +124,6 @@ python monthly_pipeline.py
 
 ---
 
-## Example Output
-
-* Parquet files stored in S3:
-
-```
-s3://<bucket>/<prefix>/part-*.parquet
-```
-
 * Plume anomaly visualization:
 
   * Grey points: noise
@@ -137,27 +132,3 @@ s3://<bucket>/<prefix>/part-*.parquet
 
 ````
 
----
-
-### `requirements.txt`
-
-```text
-prefect==2.12.2
-pandas==2.1.0
-numpy==1.27.0
-pyarrow==12.0.1
-boto3==2.13.0
-botocore==2.13.0
-scikit-learn==1.3.0
-matplotlib==3.8.0
-rasterio==1.3.9
-pyspark==3.5.0
-requests==2.32.0
-python-dotenv==1.0.1
-````
-
----
-
-I can also draft a **diagram of the pipeline workflow** for your README to make it very clear how data flows from Sentinel Hub → processing → S3 → anomaly detection.
-
-Do you want me to include that diagram?
