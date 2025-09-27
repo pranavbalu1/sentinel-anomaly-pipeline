@@ -105,15 +105,76 @@ python flow.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD
 python flow.py --start-date 2025-09-20 --end-date 2025-09-26
 ```
 
-## Anomaly Detection
 
-1. Reads processed Parquet files from S3 in batches.
-2. Preprocesses features (`B11`, `B12`, `B_diff`, latitude, longitude, date).
-3. Uses **Isolation Forest** to detect anomalous pixels.
-4. Clusters anomalies with **DBSCAN** to identify plumes.
-5. Visualizes results using matplotlib.
+## Methane Anomaly Detection (`model.py`)
+
+The `model.py` script processes transformed Sentinel-2 Parquet data, detects anomalous pixels indicative of methane plumes, clusters them, and generates visualizations.
+
+### Key Functionality
+
+1. **Read Parquet Data in Batches**
+
+   * Reads Parquet files from the configured S3 bucket using PyArrow.
+   * Filters out invalid pixels where `B11` or `B12` are 0.
+   * Handles large datasets efficiently in user-defined batch sizes.
+
+2. **Preprocessing**
+
+   * Converts dates to ordinal format for ML models.
+   * Calculates `B_diff = B11 - B12`.
+   * Standardizes features (`B11`, `B12`, `B_diff`, latitude, longitude, date) for anomaly detection.
+
+3. **Anomaly Detection**
+
+   * Uses **Isolation Forest** to detect anomalous pixels.
+   * Flags anomalies with `anomaly = -1`.
+
+4. **Clustering**
+
+   * Groups anomalies into plumes using **DBSCAN**.
+   * Prints a summary of detected clusters with latitude, longitude, date ranges, and counts.
+
+5. **Visualization**
+
+   * Generates two plots per run:
+
+     1. **Anomalies-only plot:** Colors each plume cluster differently; noise points in grey.
+     2. **All-data plot:** Shows all points (light blue) with anomalies highlighted.
 
 ---
+
+### Usage
+
+Run `model.py` as a standalone script:
+
+```bash
+python model.py
+```
+
+* **Configuration**
+
+  * `bucket` – S3 bucket name where processed Parquet files are stored.
+  * `prefix` – S3 path prefix for the dataset.
+  * `BATCH_SIZE`, `CONTAMINATION`, `EPS`, `MIN_SAMPLES` – set in `config.py`.
+
+* The script will:
+
+  1. Download Parquet data from S3 in batches.
+  2. Preprocess features for anomaly detection.
+  3. Detect anomalies and cluster them.
+  4. Save plots as PNGs in the working directory.
+
+---
+
+### Output
+
+* `anomalies_only_<timestamp>.png` – visualizes only anomalous points and plume clusters.
+* `all_data_points_<timestamp>.png` – visualizes all points, highlighting anomalies.
+* **Console logs** summarize clusters, including location bounds, date ranges, and number of points.
+
+---
+
+This makes `model.py` a fully standalone analysis tool that can be integrated with your main pipeline (`flow.py`) or run independently on previously processed Parquet datasets.
 
 ## Notes
 
