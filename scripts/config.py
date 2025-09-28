@@ -6,16 +6,13 @@ HEIGHT = 1560  # Image height
 # AWS S3
 S3_BUCKET = "ndvi-daily-data"
 
-#PREFIX = "sentinel-data" # 1 year of data
-#PREFIX = "test" # 1 month of data
-#PREFIX = "test_2" # 1 day of data
-PREFIX = "known_sources" # Known methane sources
+PREFIX = "sentinel-data"
 
 
 #Model parameters
 BATCH_SIZE = 100000
 
-CONTAMINATION = 0.01 # Proportion of outliers in the data
+CONTAMINATION = 0.005 # Proportion of outliers in the data
 RANDOM_STATE = 42
 EPS = 0.01  
-MIN_SAMPLES = 5  # DBSCAN min_samples parameter
+MIN_SAMPLES = 2  # DBSCAN min_samples parameter

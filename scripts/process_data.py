@@ -49,7 +49,7 @@ def create_spark_df(data, date_str):
     # Add date column
     df = df.withColumn("date", lit(date_str).cast(StringType()))
     print("✅ Spark DataFrame created with coordinates + date.")
-    df.show(5)
+    #df.show(5)
     return df
 
 def transform_red_edge_image(tiff_path, output_path):

@@ -5,12 +5,14 @@ import numpy as np
 import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
-from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
-from config import PREFIX, BATCH_SIZE, CONTAMINATION, RANDOM_STATE, EPS, MIN_SAMPLES
+from config import BATCH_SIZE, CONTAMINATION, RANDOM_STATE, EPS, MIN_SAMPLES
 from dotenv import load_dotenv
 from datetime import datetime
 import hdbscan
+
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
 
 load_dotenv()
 
@@ -79,21 +81,22 @@ def cluster_anomalies(anomalies):
         min_date=('date', 'min'),
         max_date=('date', 'max')
     ).reset_index()
-
+    print(f"🛢️ Identified {summary[summary['plume_cluster'] != -1].shape[0]} methane plumes")
+    '''
     for _, row in summary.iterrows():
         cluster_id = row['plume_cluster']
         print(f"Cluster {cluster_id}: {row['count']} anomalies | "
               f"Lat: {row['min_latitude']:.4f}-{row['max_latitude']:.4f} | "
               f"Lon: {row['min_longitude']:.4f}-{row['max_longitude']:.4f} | "
               f"Dates: {row['min_date']} to {row['max_date']}")
-
+'''
     return anomalies
 
 
-def plot_anomalies(all_data_df, anomalies):
+def plot_anomalies(all_data_df, anomalies, date_str):
     timestamp = datetime.now().strftime("%m-%d-%H%M")  # MM-DD-HHMM
     param_text = (f"BATCH_SIZE={BATCH_SIZE}, CONTAMINATION={CONTAMINATION}, "
-                  f"RANDOM_STATE={RANDOM_STATE}, EPS={EPS}, MIN_SAMPLES={MIN_SAMPLES}")
+                  f"MIN_SAMPLES={MIN_SAMPLES}")
 
     print(f"Total data points: {len(all_data_df)}")
     print(f"Total anomalies: {len(anomalies)}")
@@ -118,14 +121,16 @@ def plot_anomalies(all_data_df, anomalies):
 
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
-    plt.title(f'Methane Plume Anomalies ({timestamp})')
+    plt.title(f'Methane Plume Anomalies ({date_str})')
     #plt.legend()
     plt.figtext(0.5, 0.01, param_text, ha="center", fontsize=8, wrap=True)  # ⬅️ Added here
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    anomalies_file = f"anomalies_only_{timestamp}.png"
+    anomalies_file = f"anomalies_only_{date_str}.png"
     plt.savefig(anomalies_file, dpi=300)
     plt.close()
     print(f"Saved anomalies-only plot as {anomalies_file}")
+
+    return anomalies_file
 
     # ---------------------------
     # 2️⃣ Plot all datapoints
@@ -147,15 +152,14 @@ def plot_anomalies(all_data_df, anomalies):
     '''
 
 
-if __name__ == "__main__":
-    bucket = "ndvi-daily-data"
-    prefix = PREFIX
-    
+def run_model_for_date(bucket, prefix, date_str):
     all_anomalies = []
     df_batches = []
 
-    # Process S3 in batches
-    for df_batch in read_parquet_in_batches(bucket, prefix, batch_size=BATCH_SIZE):
+    # Target folder in S3 for this date
+    date_prefix = f"{prefix}/{date_str}"
+
+    for df_batch in read_parquet_in_batches(bucket, date_prefix, batch_size=BATCH_SIZE):
         if df_batch.empty:
             continue
 
@@ -168,6 +172,6 @@ if __name__ == "__main__":
     if all_anomalies:
         all_anomalies_df = pd.concat(all_anomalies, ignore_index=True)
         all_data_df = pd.concat(df_batches, ignore_index=True)
-        plot_anomalies(all_data_df, all_anomalies_df)
+        return plot_anomalies(all_data_df, all_anomalies_df, date_str)
     else:
-        print("No anomalies detected.")
+        print(f"No anomalies detected for {date_str}.")

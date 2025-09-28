@@ -26,13 +26,19 @@ def upload_parquet_directory_to_s3(date, local_base_dir, transformed_file, bucke
     if not part_files:
         raise FileNotFoundError(f"No part-*.parquet files found in {parquet_dir}")
 
-
-
     for part_file in part_files:
-        object_key = f"{PREFIX}/{os.path.basename(part_file)}"
+        object_key = f"{PREFIX}/{date}/{os.path.basename(part_file)}"
         print(f"Uploading {part_file} to s3://{bucket_name}/{object_key}...")
         upload_to_s3(part_file, bucket_name, object_key)
 
-    # Cleanup local file after upload
     shutil.rmtree(parquet_dir)
     print(f"✅ Cleaned up local files")
+
+def upload_graph_to_s3(file_path, bucket_name, date):
+    if not os.path.exists(file_path):
+        print(f"❌ Graph file {file_path} not found.")
+        return
+
+    object_key = f"graphs/{os.path.basename(file_path)}"
+    upload_to_s3(file_path, bucket_name, object_key)
+    print(f"📊 Uploaded graph {file_path} to s3://{bucket_name}/{object_key}")
