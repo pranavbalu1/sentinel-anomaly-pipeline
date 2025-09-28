@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from config import PREFIX, BATCH_SIZE, CONTAMINATION, RANDOM_STATE, EPS, MIN_SAMPLES
 from dotenv import load_dotenv
 from datetime import datetime
+import hdbscan
 
 load_dotenv()
 
@@ -48,7 +49,7 @@ def preprocess(df):
     return df
 
 
-def detect_anomalies(df):
+def detect_anomalies(df): 
     features = ['B11_scaled', 'B12_scaled', 'B_diff_scaled',
                 'latitude_scaled', 'longitude_scaled', 'date_ordinal_scaled']
     model = IsolationForest(contamination=CONTAMINATION, random_state=RANDOM_STATE)
@@ -62,9 +63,12 @@ def cluster_anomalies(anomalies):
     if anomalies.empty:
         return anomalies
 
-    X = anomalies[['latitude', 'longitude', 'date_ordinal']].to_numpy() #Should I use scaled values here?
-    db = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES).fit(X)
-    anomalies['plume_cluster'] = db.labels_
+    # Better to use scaled values for clustering
+    X = anomalies[['latitude_scaled', 'longitude_scaled', 'date_ordinal_scaled']].to_numpy()
+
+    # HDBSCAN does not use eps; instead you control it with min_cluster_size
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=MIN_SAMPLES, metric='euclidean')
+    anomalies['plume_cluster'] = clusterer.fit_predict(X)
 
     summary = anomalies.groupby('plume_cluster').agg(
         count=('latitude', 'size'),
@@ -84,6 +88,7 @@ def cluster_anomalies(anomalies):
               f"Dates: {row['min_date']} to {row['max_date']}")
 
     return anomalies
+
 
 def plot_anomalies(all_data_df, anomalies):
     timestamp = datetime.now().strftime("%m-%d-%H%M")  # MM-DD-HHMM
