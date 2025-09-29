@@ -13,7 +13,6 @@ def extract_geospatial_data(tiff_path):
     print(f"📂 Opening TIFF file: {tiff_path}")
     with rasterio.open(tiff_path) as src:
         bands = src.read()  # Shape: (bands, height, width)
-        print(f"ℹ️ Image shape (bands, height, width): {bands.shape}")
         bands = np.transpose(bands, (1, 2, 0))  # (height, width, bands)
         height, width, _ = bands.shape
 
@@ -48,8 +47,6 @@ def create_spark_df(data, date_str):
     df = spark.createDataFrame(data, schema=schema)
     # Add date column
     df = df.withColumn("date", lit(date_str).cast(StringType()))
-    print("✅ Spark DataFrame created with coordinates + date.")
-    #df.show(5)
     return df
 
 def transform_red_edge_image(tiff_path, output_path):

@@ -113,10 +113,10 @@ def plot_anomalies(all_data_df, anomalies, date_str):
     for i, cluster in enumerate(clusters):
         cluster_points = anomalies[anomalies['plume_cluster'] == cluster]
         if cluster == -1:
-            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], 
+            plt.scatter(cluster_points['latitude'], cluster_points['longitude'], 
                         s=5, color='grey', label='Noise')
         else:
-            plt.scatter(cluster_points['longitude'], cluster_points['latitude'], 
+            plt.scatter(cluster_points['latitude'], cluster_points['longitude'], 
                         s=5, color=colors[i], label=f'Plume {cluster}')
 
     plt.xlabel('Longitude')
