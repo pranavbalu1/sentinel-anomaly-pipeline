@@ -1,7 +1,7 @@
 # Bounding Box for area of interest
-BBOX = [-118.56, 33.56, -117.5, 34.245] # Example: California region
-WIDTH = 2000  # Image width
-HEIGHT = 1560  # Image height
+BBOX = [-117.85, 34.35, -117.35, 33.85]
+WIDTH = 1600
+HEIGHT = 1200
 
 # AWS S3
 S3_BUCKET = "ndvi-daily-data"
