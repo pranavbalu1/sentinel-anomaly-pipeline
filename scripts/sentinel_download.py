@@ -1,21 +1,23 @@
+"""Sentinel Hub download client for SWIR bands used in methane anomaly detection."""
+
 import requests
-from sentinel_auth import get_access_token  # <- Make sure this is here
-from config import BBOX, WIDTH, HEIGHT
-def download_sentinel_image(date_str: str, output_file: str):
+
+from config import BBOX, HEIGHT, WIDTH
+from sentinel_auth import get_access_token
+
+
+def download_sentinel_image(date_str: str, output_file: str) -> None:
+    """Download B11/B12 TIFF imagery for a single UTC date into `output_file`."""
     token = get_access_token()
 
     url = "https://services.sentinel-hub.com/api/v1/process"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
-    #B05, B06, B07 are the Red Edge bands for Sentinel-2
-    #and are sensitive to vegetation health
 
-    #B11 and B12 are SWIR bands, central wavelengths 1610 nm and 2190 nm respectively
-    #and are sensitive to methane absorption features
-
-    #sample type is set to FLOAT32 for better precision
+    # B11/B12 are SWIR bands that are sensitive to methane absorption.
+    # FLOAT32 preserves precision for downstream numerical processing.
     evalscript = """
         //VERSION=3
         function setup() {
@@ -30,23 +32,21 @@ def download_sentinel_image(date_str: str, output_file: str):
         function evaluatePixel(sample) {
         return [sample.B11, sample.B12];
         }
-
     """
 
+    # Process API payload: define area, temporal window, and output TIFF format.
     payload = {
         "input": {
-            "bounds": {
-                "bbox": BBOX
-            },
+            "bounds": {"bbox": BBOX},
             "data": [{
                 "type": "S2L1C",
                 "dataFilter": {
                     "timeRange": {
                         "from": f"{date_str}T00:00:00Z",
-                        "to": f"{date_str}T23:59:59Z"
+                        "to": f"{date_str}T23:59:59Z",
                     }
-                }
-            }]
+                },
+            }],
         },
         "evalscript": evalscript,
         "output": {
@@ -54,18 +54,18 @@ def download_sentinel_image(date_str: str, output_file: str):
             "height": HEIGHT,
             "responses": [{
                 "identifier": "default",
-                "format": {
-                    "type": "image/tiff"
-                }
-            }]
-        }
+                "format": {"type": "image/tiff"},
+            }],
+        },
     }
 
     response = requests.post(url, headers=headers, json=payload)
     if response.status_code == 200:
-        with open(output_file, "wb") as f:
-            f.write(response.content)
+        # Persist raw binary TIFF locally for the Spark transform step.
+        with open(output_file, "wb") as file_handle:
+            file_handle.write(response.content)
         print(f"✅ Download complete: {output_file}")
         print(f"📅 Data Date: {date_str}")
-    else:
-        print(f"❌ Failed: {response.status_code}\n{response.text}")
+        return
+
+    print(f"❌ Failed: {response.status_code}\n{response.text}")
